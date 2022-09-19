@@ -17,130 +17,100 @@
 #pragma once
 
 #include <thrust/detail/config.h>
-#include <thrust/tuple.h>
-#include <thrust/pair.h>
 #include <thrust/detail/reference_forward_declaration.h>
+#include <thrust/pair.h>
+#include <thrust/tuple.h>
 
 THRUST_NAMESPACE_BEGIN
 namespace detail
 {
 
-  
-template<
-  typename... Ts
->
-  class tuple_of_iterator_references
-    : public thrust::tuple<Ts...>
+template <typename... Ts>
+class tuple_of_iterator_references : public thrust::tuple<Ts...>
 {
-  private:
-    typedef thrust::tuple<Ts...> super_t;
+  using super_t = thrust::tuple<Ts...>;
+  using super_t::super_t;
 
-  public:
-    // allow implicit construction from tuple<refs>
-    inline THRUST_HOST_DEVICE
-    tuple_of_iterator_references(const super_t &other)
+public:
+  // allow implicit construction from tuple<refs>
+  inline THRUST_HOST_DEVICE
+  tuple_of_iterator_references(const super_t& other)
       : super_t(other)
-    {}
+  {}
 
-    // allow assignment from tuples
-    // XXX might be worthwhile to guard this with an enable_if is_assignable
-    __thrust_exec_check_disable__
-    template<typename... Us>
-    inline THRUST_HOST_DEVICE
-    tuple_of_iterator_references &operator=(const thrust::tuple<Us...> &other)
-    {
-      super_t::operator=(other);
-      return *this;
-    }
+  // allow assignment from tuples
+  __thrust_exec_check_disable__
+  template <typename... Us>
+  inline THRUST_HOST_DEVICE
+  tuple_of_iterator_references& operator=(const thrust::tuple<Us...>& other)
+  {
+    super_t::operator=(other);
+    return *this;
+  }
 
-    // allow assignment from pairs
-    // XXX might be worthwhile to guard this with an enable_if is_assignable
-    __thrust_exec_check_disable__
-    template<typename U1, typename U2>
-    inline THRUST_HOST_DEVICE
-    tuple_of_iterator_references &operator=(const thrust::pair<U1,U2> &other)
-    {
-      super_t::operator=(other);
-      return *this;
-    }
+  // allow assignment from pairs
+  __thrust_exec_check_disable__
+  template <typename U1, typename U2>
+  inline THRUST_HOST_DEVICE
+  tuple_of_iterator_references& operator=(const thrust::pair<U1, U2>& other)
+  {
+    get<0>(*this) = other.first;
+    get<1>(*this) = other.second;
+    return *this;
+  }
 
-    // allow assignment from reference<tuple>
-    // XXX perhaps we should generalize to reference<T>
-    //     we could captures reference<pair> this way
-    __thrust_exec_check_disable__
-    template<typename Pointer, typename Derived,
-             typename... Us>
-    inline THRUST_HOST_DEVICE
-// XXX gcc-4.2 crashes on is_assignable
-//    typename thrust::detail::enable_if<
-//      thrust::detail::is_assignable<
-//        super_t,
-//        const thrust::tuple<Us...>
-//      >::value,
-//      tuple_of_iterator_references &
-//    >::type
-    tuple_of_iterator_references &
-    operator=(const thrust::reference<thrust::tuple<Us...>, Pointer, Derived> &other)
-    {
-      typedef thrust::tuple<Us...> tuple_type;
+  // allow assignment from reference<tuple>
+  // XXX perhaps we should generalize to reference<T>
+  //     we could captures reference<pair> this way
+  __thrust_exec_check_disable__
+  template <typename Pointer, typename Derived, typename... Us>
+  inline THRUST_HOST_DEVICE
+  tuple_of_iterator_references&
+  operator=(const thrust::reference<thrust::tuple<Us...>, Pointer, Derived>& other)
+  {
+    typedef thrust::tuple<Us...> tuple_type;
 
-      // XXX perhaps this could be accelerated
-      tuple_type other_tuple = other;
-      super_t::operator=(other_tuple);
-      return *this;
-    }
+    // XXX perhaps this could be accelerated
+    tuple_type other_tuple = other;
+    super_t::operator=(other_tuple);
+    return *this;
+  }
 
-
-    // duplicate thrust::tuple's constructors
-    inline THRUST_HOST_DEVICE
-    tuple_of_iterator_references() {}
-
-    inline THRUST_HOST_DEVICE
-    tuple_of_iterator_references(typename access_traits<Ts>::parameter_type... ts)
-      : super_t(ts...)
-    {}
+  // allow conversion to tuple
+  // XXX perhaps we should constraint with enable_if
+  template <class... Us>
+  inline THRUST_HOST_DEVICE
+  operator thrust::tuple<Us...>() const { return thrust::tuple<Us...>{*this}; }
 };
 
+} // namespace detail
 
-// this overload of swap() permits swapping tuple_of_iterator_references returned as temporaries from
-// iterator dereferences
-template<
-  typename... Ts,
-  typename... Us
->
-inline THRUST_HOST_DEVICE
-void swap(tuple_of_iterator_references<Ts...> x,
-          tuple_of_iterator_references<Us...> y)
-{
-  x.swap(y);
-}
+THRUST_NAMESPACE_END
 
-
-} // end detail
+_LIBCUDACXX_BEGIN_NAMESPACE_STD
 
 // define tuple_size, tuple_element, etc.
-template<class... Ts>
-struct tuple_size<detail::tuple_of_iterator_references<Ts...>>
-  : std::integral_constant<size_t, sizeof...(Ts)>
+template <class... Ts>
+struct tuple_size<THRUST_NS_QUALIFIER::detail::tuple_of_iterator_references<Ts...>>
+    : std::integral_constant<size_t, sizeof...(Ts)>
 {};
 
-template<size_t i>
-struct tuple_element<i, detail::tuple_of_iterator_references<>> {};
+template <size_t i>
+struct tuple_element<i, THRUST_NS_QUALIFIER::detail::tuple_of_iterator_references<>>
+{};
 
-
-template<class T, class... Ts>
-struct tuple_element<0, detail::tuple_of_iterator_references<T,Ts...>>
+template <class T, class... Ts>
+struct tuple_element<0, THRUST_NS_QUALIFIER::detail::tuple_of_iterator_references<T, Ts...>>
 {
   using type = T;
 };
 
-
-template<size_t i, class T, class... Ts>
-struct tuple_element<i, detail::tuple_of_iterator_references<T,Ts...>>
+template <size_t i, class T, class... Ts>
+struct tuple_element<i, THRUST_NS_QUALIFIER::detail::tuple_of_iterator_references<T, Ts...>>
 {
-  using type = typename tuple_element<i - 1, detail::tuple_of_iterator_references<Ts...>>::type;
+  using type =
+    typename tuple_element<i - 1,
+                           THRUST_NS_QUALIFIER::detail::tuple_of_iterator_references<Ts...>>::type;
 };
 
-
-THRUST_NAMESPACE_END
-
+_LIBCUDACXX_END_NAMESPACE_STD

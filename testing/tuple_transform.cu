@@ -19,10 +19,7 @@ struct GetFunctor
 {
   template<typename Tuple>
   THRUST_HOST_DEVICE
-  typename thrust::access_traits<
-    typename thrust::tuple_element<N, Tuple>::type
-  >::const_type
-  operator()(const Tuple &t)
+  decltype(auto) operator()(const Tuple &t)
   {
     return thrust::get<N>(t);
   }
